@@ -1,19 +1,39 @@
+//
+//  EditEntryView.swift
+//  CraftJournal
+//
+//  Created by iMac09 on 9/29/26.
+//
+
 import SwiftUI
 import CoreData
 import UIKit
 import PhotosUI
 
-struct AddEntryView: View {
+struct EditEntryView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
 
-    @State private var title = ""
-    @State private var craftType = crafts[0]
-    @State private var location = ""
-    @State private var notes = ""
+    @ObservedObject var entry: CraftEntry
+
+    @State private var title: String
+    @State private var craftType: String
+    @State private var location: String
+    @State private var notes: String
     @State private var image: UIImage?
     @State private var showingCamera = false
     @State private var pickerItem: PhotosPickerItem?
+
+    init(entry: CraftEntry) {
+        self.entry = entry
+        _title = State(initialValue: entry.title ?? "")
+        _craftType = State(initialValue: entry.craftType ?? crafts[0])
+        _location = State(initialValue: entry.location ?? "")
+        _notes = State(initialValue: entry.notes ?? "")
+        if let data = entry.photo {
+            _image = State(initialValue: UIImage(data: data))
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -50,7 +70,7 @@ struct AddEntryView: View {
                         }
                 }
             }
-            .navigationTitle("New Entry")
+            .navigationTitle("Edit Entry")
             .fullScreenCover(isPresented: $showingCamera) {
                 CameraView(image: $image)
                     .ignoresSafeArea()
@@ -60,27 +80,24 @@ struct AddEntryView: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { saveEntry() }
+                    Button("Save") { saveChanges() }
                         .disabled(title.isEmpty)
                 }
             }
         }
     }
 
-    private func saveEntry() {
-        let entry = CraftEntry(context: viewContext)
-        entry.id = UUID()
+    private func saveChanges() {
         entry.title = title
         entry.craftType = craftType
         entry.location = location
         entry.notes = notes
-        entry.date = Date()
         entry.photo = image?.jpegData(compressionQuality: 0.7)
         do {
             try viewContext.save()
             dismiss()
         } catch {
-            print("Could not save: \(error)")
+            print("Could not save changes: \(error)")
         }
     }
 }
